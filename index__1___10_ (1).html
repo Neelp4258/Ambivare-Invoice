@@ -1,0 +1,1823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ambivare Invoice Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, Arial, Helvetica, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px 10px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .app-header {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        
+        .app-header h1 {
+            color: #667eea;
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        
+        .app-header p {
+            color: #6b7280;
+            font-size: 14px;
+        }
+        
+        .form-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .section-title {
+            color: #1f2937;
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 5px;
+        }
+        
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            padding: 10px 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        /* Items Table */
+        .items-container {
+            margin-top: 20px;
+        }
+        
+        .item-row {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 3px solid #667eea;
+        }
+        
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .item-number {
+            font-weight: 700;
+            color: #667eea;
+        }
+        
+        .remove-item {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .add-item-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        /* Calculations */
+        .calculations {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .calc-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 14px;
+        }
+        
+        .calc-row.total {
+            font-size: 18px;
+            font-weight: 700;
+            color: #667eea;
+            border-top: 2px solid #667eea;
+            padding-top: 12px;
+            margin-top: 8px;
+        }
+        
+        /* Signature Pad */
+        .signature-container {
+            margin-top: 20px;
+        }
+        
+        .signature-pad-wrapper {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 10px;
+            background: #f9fafb;
+        }
+        
+        #signature-canvas {
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            background: white;
+            cursor: crosshair;
+            touch-action: none;
+            width: 100%;
+            height: 200px;
+            outline: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+        
+        .signature-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .signature-controls button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        
+        .clear-sig {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        
+        .upload-sig {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        /* Action Buttons */
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .action-btn {
+            padding: 15px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 700;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .preview-btn {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .pdf-btn {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .reset-btn {
+            background: #6b7280;
+            color: white;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        /* Invoice Preview */
+        .invoice-preview {
+            display: none;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            margin-top: 20px;
+        }
+        
+        .invoice-preview.active {
+            display: block;
+        }
+        
+        /* Invoice Styles - Using your template */
+        .invoice-wrapper {
+            background-color: #ffffff;
+            width: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .header-table {
+            width: 100%;
+            background-color: #ffffff;
+            border-bottom: 2px solid #f1f3f4;
+            margin-bottom: 20px;
+        }
+        
+        .logo-cell {
+            padding: 15px;
+            vertical-align: middle;
+            width: 80px;
+        }
+        
+        .logo-cell img {
+            border-radius: 12px;
+        }
+        
+        .company-info-cell {
+            padding: 15px 10px;
+            vertical-align: middle;
+        }
+        
+        .contact-cell {
+            padding: 15px;
+            vertical-align: middle;
+            text-align: right;
+        }
+        
+        .company-name {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin: 0 0 4px 0;
+        }
+        
+        .tagline {
+            font-size: 10px;
+            color: #6b7280;
+            font-weight: 500;
+        }
+        
+        .contact-info {
+            font-size: 11px;
+            color: #4b5563;
+            line-height: 1.4;
+            font-weight: 500;
+        }
+        
+        .invoice-content {
+            padding: 0;
+        }
+        
+        .invoice-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .invoice-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        
+        .invoice-meta {
+            text-align: right;
+            font-size: 11px;
+            color: #4b5563;
+            line-height: 1.6;
+        }
+        
+        .bill-to {
+            background: #f9fafb;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 3px solid #3b82f6;
+        }
+        
+        .bill-to-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: #6b7280;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        
+        .bill-to-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 5px;
+        }
+        
+        .bill-to-details {
+            font-size: 11px;
+            color: #4b5563;
+            line-height: 1.5;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+            font-size: 12px;
+        }
+        
+        .items-table thead {
+            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+        }
+        
+        .items-table th {
+            padding: 10px 6px;
+            text-align: left;
+            font-size: 10px;
+            font-weight: 600;
+            color: #ffffff;
+            text-transform: uppercase;
+        }
+        
+        .items-table th:first-child {
+            width: 30px;
+            text-align: center;
+        }
+        
+        .items-table th:last-child,
+        .items-table td:last-child {
+            text-align: right;
+        }
+        
+        .items-table tbody tr {
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .items-table td {
+            padding: 10px 6px;
+            color: #374151;
+        }
+        
+        .items-table td:first-child {
+            text-align: center;
+            font-weight: 600;
+            color: #6b7280;
+        }
+        
+        .item-desc {
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .totals-section {
+            margin-bottom: 15px;
+        }
+        
+        .totals-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 13px;
+        }
+        
+        .totals-row.subtotal {
+            color: #6b7280;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .totals-row.discount {
+            color: #059669;
+        }
+        
+        .totals-row.gst {
+            color: #6b7280;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #1f2937;
+        }
+        
+        .totals-row.total {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1f2937;
+            padding-top: 8px;
+        }
+        
+        .payment-box {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 2px solid #3b82f6;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .payment-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1e40af;
+            margin-bottom: 10px;
+        }
+        
+        .payment-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 12px;
+        }
+        
+        .payment-row.advance {
+            font-weight: 700;
+            color: #1e40af;
+            font-size: 13px;
+            padding-bottom: 6px;
+            border-bottom: 1px dashed #3b82f6;
+            margin-bottom: 6px;
+        }
+        
+        .notes-box {
+            background: #fef3c7;
+            border-left: 3px solid #f59e0b;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+        
+        .notes-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #92400e;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        
+        .note-text {
+            font-size: 10px;
+            color: #78350f;
+            line-height: 1.5;
+            margin-bottom: 6px;
+        }
+        
+        .signature-section {
+            margin-top: 20px;
+            text-align: right;
+        }
+        
+        .signature-image {
+            max-width: 200px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 5px;
+            background: white;
+        }
+        
+        .invoice-footer {
+            text-align: center;
+            padding: 10px;
+            font-size: 9px;
+            color: #9ca3af;
+            border-top: 1px solid #e5e7eb;
+            margin-top: 20px;
+        }
+        
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px 5px;
+            }
+            
+            .form-container {
+                padding: 15px;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-buttons {
+                grid-template-columns: 1fr;
+            }
+            
+            .invoice-title-row {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .invoice-meta {
+                text-align: left;
+            }
+            
+            .items-table {
+                font-size: 10px;
+            }
+            
+            .items-table th,
+            .items-table td {
+                padding: 8px 4px;
+            }
+        }
+        
+        /* Loading Overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .loading-overlay.active {
+            display: flex;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- App Header -->
+        <div class="app-header">
+            <h1>📄 Ambivare Invoice Generator</h1>
+            <p>Create Professional Invoices in Seconds</p>
+        </div>
+        
+        <!-- Form Container -->
+        <div class="form-container">
+            <!-- Invoice Details -->
+            <div class="section-title">📋 Document Details</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Document Type*</label>
+                    <select id="documentType" onchange="updateDocumentType()">
+                        <option value="invoice">Invoice</option>
+                        <option value="quotation">Quotation</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label><span id="docNumberLabel">Invoice</span> Number*</label>
+                    <input type="text" id="invoiceNumber" placeholder="INV-0001" required>
+                </div>
+                <div class="form-group">
+                    <label><span id="docDateLabel">Invoice</span> Date*</label>
+                    <input type="date" id="invoiceDate" required>
+                </div>
+                <div class="form-group" id="dueDateField">
+                    <label>Due Date*</label>
+                    <input type="date" id="dueDate" required>
+                </div>
+                <div class="form-group hidden" id="validTillField">
+                    <label>Valid Till*</label>
+                    <input type="date" id="validTill">
+                </div>
+                <div class="form-group">
+                    <label>PO Number</label>
+                    <input type="text" id="poNumber" placeholder="PO-1010">
+                </div>
+            </div>
+            
+            <!-- Client Details -->
+            <div class="section-title">👤 Client Details</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Client Name*</label>
+                    <input type="text" id="clientName" placeholder="Company Name" required>
+                </div>
+                <div class="form-group">
+                    <label>Client Email</label>
+                    <input type="email" id="clientEmail" placeholder="client@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Client Phone</label>
+                    <input type="tel" id="clientPhone" placeholder="+91 9876543210">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Client Address*</label>
+                    <textarea id="clientAddress" placeholder="Full address with pincode" required></textarea>
+                </div>
+            </div>
+            
+            <!-- Items Section -->
+            <div class="section-title">🛒 Invoice Items</div>
+            <div id="itemsContainer" class="items-container">
+                <!-- Items will be added here dynamically -->
+            </div>
+            <button class="add-item-btn" onclick="addItem()">+ Add Item</button>
+            
+            <!-- Calculations -->
+            <div class="calculations">
+                <div class="calc-row">
+                    <span>Subtotal:</span>
+                    <span id="subtotalDisplay">Rs. 0.00</span>
+                </div>
+                <div class="form-row" style="margin-top: 10px;">
+                    <div class="form-group">
+                        <label>Discount (%)</label>
+                        <input type="number" id="discountPercent" value="0" min="0" max="100" step="0.01" onchange="calculateTotals()">
+                    </div>
+                    <div class="form-group">
+                        <label>GST (%)</label>
+                        <input type="number" id="gstPercent" value="18" min="0" max="100" step="0.01" onchange="calculateTotals()">
+                    </div>
+                </div>
+                <div class="calc-row">
+                    <span>Discount:</span>
+                    <span id="discountDisplay">Rs. 0.00</span>
+                </div>
+                <div class="calc-row">
+                    <span>GST:</span>
+                    <span id="gstDisplay">Rs. 0.00</span>
+                </div>
+                <div class="calc-row total">
+                    <span>TOTAL:</span>
+                    <span id="totalDisplay">Rs. 0.00</span>
+                </div>
+            </div>
+            
+            <!-- Payment Schedule -->
+            <div class="section-title">💰 Payment Schedule</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="enableAdvance" onchange="toggleAdvancePayment()" checked style="width: auto; margin: 0;">
+                        Enable Advance Payment
+                    </label>
+                </div>
+            </div>
+            <div id="advanceFields">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Advance Payment (%)</label>
+                        <input type="number" id="advancePercent" value="40" min="0" max="100" step="1" onchange="calculateTotals()">
+                    </div>
+                    <div class="form-group">
+                        <label>Advance Amount</label>
+                        <input type="text" id="advanceAmount" readonly style="background: #f3f4f6;">
+                    </div>
+                    <div class="form-group">
+                        <label>Remaining Amount</label>
+                        <input type="text" id="remainingAmount" readonly style="background: #f3f4f6;">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Notes -->
+            <div class="section-title">📝 Additional Notes</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Payment Terms</label>
+                    <textarea id="paymentTerms" placeholder="Payment terms and conditions">All payments shall be made via bank transfer, cheque, or UPI within 7 working days of invoice submission.</textarea>
+                </div>
+                <div class="form-group">
+                    <label>Warranty Terms</label>
+                    <textarea id="warrantyTerms" placeholder="Warranty and ownership terms">Ownership of the ERP system and associated digital services will be transferred only after full and final payment. Warranty and support services shall commence post-completion of all due payments.</textarea>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Additional Notes</label>
+                    <textarea id="additionalNotes" placeholder="Any other important information">Invoice and pricing are valid for 5 days from the date of issue.</textarea>
+                </div>
+            </div>
+            
+            <!-- Bank Details -->
+            <div class="section-title">🏦 Bank Details (Optional)</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Account Name</label>
+                    <input type="text" id="bankAccountName" placeholder="DAZZLO ENTERPRISES PRIVATE LIMITED" value="DAZZLO ENTERPRISES PRIVATE LIMITED">
+                </div>
+                <div class="form-group">
+                    <label>Account Number</label>
+                    <input type="text" id="bankAccountNumber" placeholder="2502234676621230" value="2502234676621230">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Bank Name</label>
+                    <input type="text" id="bankName" placeholder="AU Small Finance Bank" value="AU Small Finance Bank">
+                </div>
+                <div class="form-group">
+                    <label>IFSC Code</label>
+                    <input type="text" id="bankIFSC" placeholder="AUBL0002346" value="AUBL0002346">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Branch</label>
+                    <input type="text" id="bankBranch" placeholder="Kalyan West, Thane" value="Kalyan West, Thane">
+                </div>
+            </div>
+            
+            <!-- Logo Upload Section -->
+            <div class="section-title">🖼️ Company Logo</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Upload Company Logo</label>
+                    <input type="file" id="logoUpload" accept="image/*" onchange="uploadLogo(event)" style="padding: 8px;">
+                    <small style="color: #6b7280; display: block; margin-top: 5px;">Upload your company logo (PNG, JPG recommended) or leave blank to use default Ambivare logo</small>
+                </div>
+                <div class="form-group" id="logoPreviewContainer">
+                    <label>Logo Preview</label>
+                    <div style="border: 2px dashed #e5e7eb; border-radius: 8px; padding: 10px; text-align: center;">
+                        <img id="logoPreview" src="./ambivare.png" style="max-width: 100px; max-height: 100px; border-radius: 4px;" alt="Default Ambivare Logo">
+                        <div id="logoStatus" style="font-size: 11px; color: #6b7280; margin-top: 5px;">Default Ambivare logo (will be used if no custom logo uploaded)</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Signature Section -->
+            <div class="signature-container">
+                <div class="section-title">✍️ Authorized Signature</div>
+                <div class="form-row" style="margin-bottom: 15px;">
+                    <div class="form-group">
+                        <label>Authorized Person Name</label>
+                        <input type="text" id="authorizedPersonName" placeholder="Enter name of authorized person" value="Siddharth Chavan">
+                    </div>
+                </div>
+                <div class="signature-pad-wrapper">
+                    <canvas id="signature-canvas"></canvas>
+                </div>
+                <div class="signature-controls">
+                    <button class="clear-sig" onclick="clearSignature()">Clear Signature</button>
+                    <button class="upload-sig" onclick="document.getElementById('signatureUpload').click()">Upload Signature</button>
+                    <input type="file" id="signatureUpload" accept="image/*" style="display: none;" onchange="uploadSignature(event)">
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="action-btn preview-btn" onclick="generatePreview()">
+                    <span id="previewBtnText">👁️ Preview Invoice</span>
+                </button>
+                <button class="action-btn pdf-btn" onclick="generatePDF()">
+                    <span id="pdfBtnText">📥 Download PDF</span>
+                </button>
+                <button class="action-btn reset-btn" onclick="resetForm()">
+                    🔄 Reset Form
+                </button>
+            </div>
+        </div>
+        
+        <!-- Invoice Preview -->
+        <div class="invoice-preview" id="invoicePreview">
+            <div class="invoice-wrapper" id="invoiceContent">
+                <!-- Invoice will be generated here -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
+
+    <script>
+        // Initialize
+        let itemCounter = 0;
+        let signaturePad;
+        let uploadedSignature = null;
+        let uploadedLogo = null;
+        let ambivareLogo = null; // Store preloaded ambivare logo
+        
+        // Preload ambivare logo
+        function preloadAmbivareLogo() {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = function() {
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    ambivareLogo = canvas.toDataURL('image/png');
+                    console.log('Ambivare logo preloaded successfully');
+                } catch(e) {
+                    console.log('Failed to preload ambivare logo:', e);
+                }
+            };
+            img.onerror = function() {
+                console.log('Ambivare.png not found in directory');
+            };
+            img.src = './ambivare.png';
+        }
+        
+        // Initialize signature pad
+        window.addEventListener('load', function() {
+            // Preload ambivare logo first
+            preloadAmbivareLogo();
+            
+            const canvas = document.getElementById('signature-canvas');
+            console.log('Initializing signature pad, canvas element:', canvas);
+            
+            if (canvas) {
+                signaturePad = new SignaturePad(canvas, {
+                    backgroundColor: 'rgb(255, 255, 255)',
+                    penColor: 'rgb(0, 0, 0)',
+                    minWidth: 1,
+                    maxWidth: 2.5,
+                    throttle: 16,
+                    minDistance: 5
+                });
+                
+                console.log('Signature pad initialized:', signaturePad);
+                
+                // Set canvas size
+                resizeCanvas();
+                window.addEventListener('resize', resizeCanvas);
+                
+                // Prevent canvas from clearing on focus/blur events
+                canvas.addEventListener('blur', function(e) {
+                    e.preventDefault();
+                    return false;
+                });
+                
+                canvas.addEventListener('focusout', function(e) {
+                    e.preventDefault();
+                    return false;
+                });
+                
+            } else {
+                console.error('Signature canvas not found!');
+            }
+            
+            // Set today's date
+            document.getElementById('invoiceDate').valueAsDate = new Date();
+            
+            // Set due date (7 days from today)
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + 7);
+            document.getElementById('dueDate').valueAsDate = dueDate;
+            
+            // Set valid till (5 days from today) for quotation
+            const validTill = new Date();
+            validTill.setDate(validTill.getDate() + 5);
+            document.getElementById('validTill').valueAsDate = validTill;
+            
+            // Add first item
+            addItem();
+        });
+        
+        function updateDocumentType() {
+            const docType = document.getElementById('documentType').value;
+            const isQuotation = docType === 'quotation';
+            
+            // Update labels
+            document.getElementById('docNumberLabel').textContent = isQuotation ? 'Quotation' : 'Invoice';
+            document.getElementById('docDateLabel').textContent = isQuotation ? 'Quotation' : 'Invoice';
+            
+            // Toggle date fields
+            document.getElementById('dueDateField').classList.toggle('hidden', isQuotation);
+            document.getElementById('validTillField').classList.toggle('hidden', !isQuotation);
+            
+            // Update app header
+            const headerTitle = document.querySelector('.app-header h1');
+            headerTitle.textContent = isQuotation ? '📄 Ambivare Quotation Generator' : '📄 Ambivare Invoice Generator';
+            
+            const headerSubtitle = document.querySelector('.app-header p');
+            headerSubtitle.textContent = isQuotation ? 'Create Professional Quotations in Seconds' : 'Create Professional Invoices in Seconds';
+            
+            // Update button text
+            document.getElementById('previewBtnText').textContent = isQuotation ? '👁️ Preview Quotation' : '👁️ Preview Invoice';
+        }
+        
+        function toggleAdvancePayment() {
+            const isEnabled = document.getElementById('enableAdvance').checked;
+            document.getElementById('advanceFields').style.display = isEnabled ? 'block' : 'none';
+            if (!isEnabled) {
+                document.getElementById('advancePercent').value = '0';
+            } else {
+                document.getElementById('advancePercent').value = '40';
+            }
+            calculateTotals();
+        }
+        
+        function resizeCanvas() {
+            const canvas = document.getElementById('signature-canvas');
+            if (!canvas || !signaturePad) {
+                console.log('Canvas or signature pad not available for resizing');
+                return;
+            }
+            
+            // Save current signature data if exists
+            const signatureData = signaturePad.isEmpty() ? null : signaturePad.toDataURL();
+            
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+            const rect = canvas.getBoundingClientRect();
+            
+            // Set the actual size in memory (scaled to account for extra pixel density)
+            canvas.width = rect.width * ratio;
+            canvas.height = rect.height * ratio;
+            
+            // Scale the drawing context so everything will work at the higher ratio
+            const ctx = canvas.getContext("2d");
+            ctx.scale(ratio, ratio);
+            
+            // Scale back down using CSS
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+            
+            // Clear and restore signature if it existed
+            signaturePad.clear();
+            if (signatureData) {
+                const img = new Image();
+                img.onload = function() {
+                    ctx.drawImage(img, 0, 0, rect.width, rect.height);
+                };
+                img.src = signatureData;
+            }
+            
+            console.log('Canvas resized to:', canvas.width, 'x', canvas.height);
+        }
+        
+        function clearSignature() {
+            if (signaturePad) {
+                signaturePad.clear();
+                console.log('Signature pad cleared');
+            }
+            uploadedSignature = null;
+            console.log('Uploaded signature cleared');
+            
+            // Also clear canvas visually
+            const canvas = document.getElementById('signature-canvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+        
+        function uploadSignature(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedSignature = e.target.result;
+                    const canvas = document.getElementById('signature-canvas');
+                    const ctx = canvas.getContext('2d');
+                    const img = new Image();
+                    img.onload = function() {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        function uploadLogo(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedLogo = e.target.result;
+                    // Show custom logo preview
+                    document.getElementById('logoPreview').src = e.target.result;
+                    document.getElementById('logoStatus').textContent = `Custom logo: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+                    console.log('Custom logo uploaded:', file.name);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                // Reset to default when no file selected
+                uploadedLogo = null;
+                document.getElementById('logoPreview').src = './ambivare.png';
+                document.getElementById('logoStatus').textContent = 'Default Ambivare logo (will be used if no custom logo uploaded)';
+            }
+        }
+        
+        // Add new item
+        function addItem() {
+            itemCounter++;
+            const itemHTML = `
+                <div class="item-row" id="item-${itemCounter}">
+                    <div class="item-header">
+                        <span class="item-number">Item #${itemCounter}</span>
+                        <button class="remove-item" onclick="removeItem(${itemCounter})">Remove</button>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Description*</label>
+                            <input type="text" class="item-desc-input" placeholder="Product/Service description" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Quantity*</label>
+                            <input type="number" class="item-qty" value="1" min="1" step="1" onchange="calculateTotals()" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Unit</label>
+                            <input type="text" class="item-unit" placeholder="e.g., Software, Hours" value="Software">
+                        </div>
+                        <div class="form-group">
+                            <label>Rate (Rs.)*</label>
+                            <input type="number" class="item-rate" value="0" min="0" step="0.01" onchange="calculateTotals()" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Amount (Rs.)</label>
+                            <input type="text" class="item-amount" readonly style="background: #f3f4f6;">
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('itemsContainer').insertAdjacentHTML('beforeend', itemHTML);
+            calculateTotals();
+        }
+        
+        // Remove item
+        function removeItem(id) {
+            const item = document.getElementById(`item-${id}`);
+            if (item) {
+                item.remove();
+                calculateTotals();
+            }
+        }
+        
+        // Calculate totals
+        function calculateTotals() {
+            const items = document.querySelectorAll('.item-row');
+            let subtotal = 0;
+            
+            items.forEach(item => {
+                const qty = parseFloat(item.querySelector('.item-qty').value) || 0;
+                const rate = parseFloat(item.querySelector('.item-rate').value) || 0;
+                const amount = qty * rate;
+                item.querySelector('.item-amount').value = amount.toFixed(2);
+                subtotal += amount;
+            });
+            
+            const discountPercent = parseFloat(document.getElementById('discountPercent').value) || 0;
+            const gstPercent = parseFloat(document.getElementById('gstPercent').value) || 0;
+            
+            const discountAmount = (subtotal * discountPercent) / 100;
+            const afterDiscount = subtotal - discountAmount;
+            const gstAmount = (afterDiscount * gstPercent) / 100;
+            const total = afterDiscount + gstAmount;
+            
+            document.getElementById('subtotalDisplay').textContent = `Rs. ${subtotal.toFixed(2)}`;
+            document.getElementById('discountDisplay').textContent = `-Rs. ${discountAmount.toFixed(2)}`;
+            document.getElementById('gstDisplay').textContent = `Rs. ${gstAmount.toFixed(2)}`;
+            document.getElementById('totalDisplay').textContent = `Rs. ${total.toFixed(2)}`;
+            
+            // Calculate payment schedule
+            const advancePercent = parseFloat(document.getElementById('advancePercent').value) || 0;
+            const advanceAmount = (total * advancePercent) / 100;
+            const remainingAmount = total - advanceAmount;
+            
+            document.getElementById('advanceAmount').value = `Rs. ${advanceAmount.toFixed(2)}`;
+            document.getElementById('remainingAmount').value = `Rs. ${remainingAmount.toFixed(2)}`;
+            
+            return { subtotal, discountAmount, gstAmount, total, advanceAmount, remainingAmount };
+        }
+        
+        // Format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+        
+        // Generate invoice preview
+        function generatePreview() {
+            const docType = document.getElementById('documentType').value;
+            const isQuotation = docType === 'quotation';
+            
+            const invoiceNumber = document.getElementById('invoiceNumber').value;
+            const invoiceDate = document.getElementById('invoiceDate').value;
+            const dueDate = isQuotation ? document.getElementById('validTill').value : document.getElementById('dueDate').value;
+            const poNumber = document.getElementById('poNumber').value;
+            const clientName = document.getElementById('clientName').value;
+            const clientEmail = document.getElementById('clientEmail').value;
+            const clientPhone = document.getElementById('clientPhone').value;
+            const clientAddress = document.getElementById('clientAddress').value;
+            
+            if (!invoiceNumber || !invoiceDate || !dueDate || !clientName || !clientAddress) {
+                alert('Please fill all required fields!');
+                return;
+            }
+            
+            const calculations = calculateTotals();
+            const items = document.querySelectorAll('.item-row');
+            
+            let itemsHTML = '';
+            items.forEach((item, index) => {
+                const desc = item.querySelector('.item-desc-input').value;
+                const qty = item.querySelector('.item-qty').value;
+                const unit = item.querySelector('.item-unit').value;
+                const rate = item.querySelector('.item-rate').value;
+                const amount = item.querySelector('.item-amount').value;
+                
+                itemsHTML += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td class="item-desc">${desc}</td>
+                        <td>${qty}</td>
+                        <td>${unit}</td>
+                        <td>${parseFloat(rate).toFixed(2)}</td>
+                        <td>${parseFloat(amount).toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+            
+            // Get signature
+            let signatureHTML = '';
+            if (!signaturePad.isEmpty() || uploadedSignature) {
+                const signatureData = uploadedSignature || signaturePad.toDataURL();
+                signatureHTML = `
+                    <div class="signature-section">
+                        <p style="font-size: 11px; color: #6b7280; margin-bottom: 5px;">Authorized Signature:</p>
+                        <img src="${signatureData}" class="signature-image" alt="Signature">
+                    </div>
+                `;
+            }
+            
+            // Get notes
+            const paymentTerms = document.getElementById('paymentTerms').value;
+            const warrantyTerms = document.getElementById('warrantyTerms').value;
+            const additionalNotes = document.getElementById('additionalNotes').value;
+            
+            let notesHTML = '';
+            if (paymentTerms) {
+                notesHTML += `<div class="note-text"><strong>Payment Mode & Timeline:</strong> ${paymentTerms}</div>`;
+            }
+            if (warrantyTerms) {
+                notesHTML += `<div class="note-text"><strong>Ownership & Warranty:</strong> ${warrantyTerms}</div>`;
+            }
+            if (additionalNotes) {
+                notesHTML += `<div class="note-text">${additionalNotes}</div>`;
+            }
+            
+            const invoiceHTML = `
+                <table class="header-table" cellpadding="0" cellspacing="0" border="0" style="width: 100%; background-color: #ffffff; border-bottom: 2px solid #f1f3f4; margin-bottom: 20px;">
+                    <tr>
+                        <td class="logo-cell" style="padding: 15px; vertical-align: middle; width: 80px;">
+                            <img src="./ambivare.png" alt="Ambivare Solutions" width="60" height="60" style="border-radius: 12px; display: block;">
+                        </td>
+                        <td class="company-info-cell" style="padding: 15px 10px; vertical-align: middle;">
+                            <div class="company-name" style="font-size: 22px; font-weight: 700; color: #1a1a1a; margin: 0 0 4px 0;">Ambivare Solutions</div>
+                            <div class="tagline" style="font-size: 10px; color: #6b7280; font-weight: 500;">BUILT FOR AUTOMATION</div>
+                        </td>
+                        <td class="contact-cell" style="padding: 15px; vertical-align: middle; text-align: right;">
+                            <div class="contact-info" style="font-size: 11px; color: #4b5563; line-height: 1.4; font-weight: 500;">
+                                operations@ambivare.com<br>
+                                +91 9373015503<br>
+                                www.ambivare.com
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+                
+                <div class="invoice-content">
+                    <div class="invoice-title-row">
+                        <div class="invoice-title">${isQuotation ? 'QUOTATION' : 'INVOICE'}</div>
+                        <div class="invoice-meta">
+                            <div><strong>${isQuotation ? 'QUOTATION' : 'INVOICE'} #:</strong> ${invoiceNumber}</div>
+                            <div><strong>Date:</strong> ${formatDate(invoiceDate)}</div>
+                            <div><strong>${isQuotation ? 'Valid Till' : 'Due Date'}:</strong> ${formatDate(dueDate)}</div>
+                            ${poNumber ? `<div><strong>PO #:</strong> ${poNumber}</div>` : ''}
+                        </div>
+                    </div>
+                    
+                    <div class="bill-to">
+                        <div class="bill-to-label">Bill To:</div>
+                        <div class="bill-to-name">${clientName}</div>
+                        <div class="bill-to-details">
+                            ${clientAddress.replace(/\n/g, '<br>')}
+                            ${clientPhone ? `<br><strong>Phone:</strong> ${clientPhone}` : ''}
+                            ${clientEmail ? `<br><strong>Email:</strong> ${clientEmail}` : ''}
+                        </div>
+                    </div>
+                    
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Description</th>
+                                <th>Qty</th>
+                                <th>Unit</th>
+                                <th>Rate</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHTML}
+                        </tbody>
+                    </table>
+                    
+                    <div class="totals-section">
+                        <div class="totals-row subtotal">
+                            <div>Subtotal:</div>
+                            <div>Rs. ${calculations.subtotal.toFixed(2)}</div>
+                        </div>
+                        ${calculations.discountAmount > 0 ? `
+                        <div class="totals-row discount">
+                            <div>Discount (${document.getElementById('discountPercent').value}%):</div>
+                            <div>-Rs. ${calculations.discountAmount.toFixed(2)}</div>
+                        </div>
+                        ` : ''}
+                        <div class="totals-row gst">
+                            <div>GST (${document.getElementById('gstPercent').value}%):</div>
+                            <div>Rs. ${calculations.gstAmount.toFixed(2)}</div>
+                        </div>
+                        <div class="totals-row total">
+                            <div>TOTAL:</div>
+                            <div>Rs. ${calculations.total.toFixed(2)}</div>
+                        </div>
+                    </div>
+                    
+                    ${document.getElementById('enableAdvance').checked && calculations.advanceAmount > 0 ? `
+                    <div class="payment-box">
+                        <div class="payment-title">Payment Schedule:</div>
+                        <div class="payment-row advance">
+                            <div>Advance Payment (${document.getElementById('advancePercent').value}%) - Due Today:</div>
+                            <div>Rs. ${calculations.advanceAmount.toFixed(2)}</div>
+                        </div>
+                        <div class="payment-row remaining">
+                            <div>Remaining Balance (${100 - parseFloat(document.getElementById('advancePercent').value)}%):</div>
+                            <div>Rs. ${calculations.remainingAmount.toFixed(2)}</div>
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    ${notesHTML ? `
+                    <div class="notes-box">
+                        <div class="notes-title">Notes:</div>
+                        ${notesHTML}
+                    </div>
+                    ` : ''}
+                    
+                    ${document.getElementById('bankAccountName').value ? `
+                    <div style="background: #e0f2fe; border-left: 3px solid #0284c7; padding: 10px; border-radius: 6px; margin-bottom: 12px;">
+                        <div style="font-size: 10px; font-weight: 700; color: #075985; margin-bottom: 6px; text-transform: uppercase;">Bank Details:</div>
+                        <div style="display: flex; justify-content: space-between; font-size: 10px; color: #0c4a6e; line-height: 1.5;">
+                            <div>
+                                <strong>Account Name:</strong> ${document.getElementById('bankAccountName').value}<br>
+                                <strong>Account Number:</strong> ${document.getElementById('bankAccountNumber').value}
+                            </div>
+                            <div style="text-align: right;">
+                                <strong>Bank:</strong> ${document.getElementById('bankName').value}<br>
+                                <strong>IFSC:</strong> ${document.getElementById('bankIFSC').value}<br>
+                                <strong>Branch:</strong> ${document.getElementById('bankBranch').value}
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    ${signatureHTML}
+                </div>
+                
+                <div class="invoice-footer">
+                    This is a computer-generated document. Generated on ${formatDate(new Date().toISOString().split('T')[0])}
+                </div>
+            `;
+            
+            document.getElementById('invoiceContent').innerHTML = invoiceHTML;
+            document.getElementById('invoicePreview').classList.add('active');
+            
+            // Scroll to preview
+            document.getElementById('invoicePreview').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Generate PDF
+        function generatePDF() {
+            const docType = document.getElementById('documentType').value;
+            const isQuotation = docType === 'quotation';
+            
+            const invoiceNumber = document.getElementById('invoiceNumber').value;
+            const invoiceDate = document.getElementById('invoiceDate').value;
+            const dueDate = isQuotation ? document.getElementById('validTill').value : document.getElementById('dueDate').value;
+            const poNumber = document.getElementById('poNumber').value;
+            const clientName = document.getElementById('clientName').value;
+            const clientEmail = document.getElementById('clientEmail').value;
+            const clientPhone = document.getElementById('clientPhone').value;
+            const clientAddress = document.getElementById('clientAddress').value;
+            
+            if (!invoiceNumber || !invoiceDate || !dueDate || !clientName || !clientAddress) {
+                alert('Please fill all required fields!');
+                return;
+            }
+            
+            // Show loading
+            document.getElementById('loadingOverlay').classList.add('active');
+            
+            setTimeout(() => {
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF('p', 'mm', 'a4');
+                    
+                    const pageWidth = 210;
+                    const pageHeight = 297;
+                    const margin = 10;
+                    const contentWidth = pageWidth - (margin * 2);
+                    
+                    let yPos = margin + 3;
+                    
+                    
+                    // Logo - Use uploaded logo or preloaded ambivare.png fallback
+                    if (uploadedLogo) {
+                        try {
+                            console.log('Adding uploaded logo to PDF');
+                            console.log('Logo data type:', typeof uploadedLogo);
+                            console.log('Logo data starts with:', uploadedLogo.substring(0, 30));
+                            
+                            // Ensure logo is in proper format
+                            if (uploadedLogo.startsWith('data:image')) {
+                                // Determine format from data URL
+                                const format = uploadedLogo.includes('data:image/png') ? 'PNG' : 'JPEG';
+                                doc.addImage(uploadedLogo, format, margin, yPos, 22, 22);
+                                console.log('Uploaded logo added successfully!');
+                            } else {
+                                throw new Error('Invalid logo data format');
+                            }
+                        } catch(e) {
+                            console.log('Uploaded logo error, trying ambivare fallback:', e);
+                            // Fallback to preloaded ambivare.png
+                            if (ambivareLogo) {
+                                try {
+                                    doc.addImage(ambivareLogo, 'PNG', margin, yPos, 22, 22);
+                                    console.log('Ambivare.png fallback successful');
+                                } catch(fallbackError) {
+                                    console.log('Ambivare.png fallback failed:', fallbackError);
+                                    // Final fallback to placeholder
+                                    doc.setFillColor(102, 126, 234);
+                                    doc.roundedRect(margin, yPos, 22, 22, 2, 2, 'F');
+                                    doc.setTextColor(255, 255, 255);
+                                    doc.setFontSize(14);
+                                    doc.setFont('helvetica', 'bold');
+                                    doc.text('AS', margin + 6, yPos + 15);
+                                }
+                            } else {
+                                // No ambivare logo available, use placeholder
+                                doc.setFillColor(102, 126, 234);
+                                doc.roundedRect(margin, yPos, 22, 22, 2, 2, 'F');
+                                doc.setTextColor(255, 255, 255);
+                                doc.setFontSize(14);
+                                doc.setFont('helvetica', 'bold');
+                                doc.text('AS', margin + 6, yPos + 15);
+                            }
+                        }
+                    } else {
+                        // Use preloaded ambivare.png as default
+                        if (ambivareLogo) {
+                            try {
+                                doc.addImage(ambivareLogo, 'PNG', margin, yPos, 22, 22);
+                                console.log('Default ambivare.png logo added successfully');
+                            } catch(e) {
+                                console.log('Ambivare.png failed, using placeholder:', e);
+                                // Fallback to placeholder when ambivare.png fails
+                                doc.setFillColor(102, 126, 234);
+                                doc.roundedRect(margin, yPos, 22, 22, 2, 2, 'F');
+                                doc.setTextColor(255, 255, 255);
+                                doc.setFontSize(14);
+                                doc.setFont('helvetica', 'bold');
+                                doc.text('AS', margin + 6, yPos + 15);
+                            }
+                        } else {
+                            console.log('Ambivare.png not preloaded, using placeholder');
+                            // Fallback to placeholder when ambivare.png not available
+                            doc.setFillColor(102, 126, 234);
+                            doc.roundedRect(margin, yPos, 22, 22, 2, 2, 'F');
+                            doc.setTextColor(255, 255, 255);
+                            doc.setFontSize(14);
+                            doc.setFont('helvetica', 'bold');
+                            doc.text('AS', margin + 6, yPos + 15);
+                        }
+                    }
+                    
+                    // Company Name
+                    doc.setFontSize(24);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(26, 26, 26);
+                    doc.text('Ambivare Solutions', margin + 27, yPos + 8);
+                    
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(107, 114, 128);
+                    doc.text('BUILT FOR AUTOMATION', margin + 27, yPos + 14);
+                    
+                    // Contact Info
+                    doc.setFontSize(10);
+                    doc.setTextColor(75, 85, 99);
+                    doc.text('operations@ambivare.com', pageWidth - margin, yPos + 4, { align: 'right' });
+                    doc.text('+91 9373015503', pageWidth - margin, yPos + 10, { align: 'right' });
+                    doc.text('www.ambivare.com', pageWidth - margin, yPos + 16, { align: 'right' });
+                    
+                    yPos += 27;
+                    
+                    // Separator
+                    doc.setDrawColor(229, 231, 235);
+                    doc.setLineWidth(0.3);
+                    doc.line(margin, yPos, pageWidth - margin, yPos);
+                    yPos += 10;
+                    
+                    // Title and Meta in same row
+                    doc.setFontSize(32);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(31, 41, 55);
+                    doc.text(isQuotation ? 'QUOTATION' : 'INVOICE', margin, yPos);
+                    
+                    // Meta info - properly aligned
+                    doc.setFontSize(11);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(75, 85, 99);
+                    let metaY = yPos - 8;
+                    doc.text(`${isQuotation ? 'QUOTATION' : 'INVOICE'} #: ${invoiceNumber}`, pageWidth - margin, metaY, { align: 'right' });
+                    metaY += 6;
+                    doc.text(`Date: ${formatDate(invoiceDate)}`, pageWidth - margin, metaY, { align: 'right' });
+                    metaY += 6;
+                    doc.text(`${isQuotation ? 'Valid Till' : 'Due Date'}: ${formatDate(dueDate)}`, pageWidth - margin, metaY, { align: 'right' });
+                    if (poNumber) {
+                        metaY += 6;
+                        doc.text(`PO #: ${poNumber}`, pageWidth - margin, metaY, { align: 'right' });
+                    }
+                    
+                    yPos += 12;
+                    
+                    // Bill To Box
+                    const billToHeight = 28;
+                    doc.setFillColor(249, 250, 251);
+                    doc.roundedRect(margin, yPos, contentWidth, billToHeight, 2, 2, 'F');
+                    doc.setDrawColor(59, 130, 246);
+                    doc.setLineWidth(2);
+                    doc.line(margin, yPos, margin, yPos + billToHeight);
+                    
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(107, 114, 128);
+                    doc.text('BILL TO:', margin + 4, yPos + 6);
+                    
+                    doc.setFontSize(14);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(31, 41, 55);
+                    doc.text(clientName, margin + 4, yPos + 13);
+                    
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(75, 85, 99);
+                    const addressLines = doc.splitTextToSize(clientAddress, 100);
+                    doc.text(addressLines, margin + 4, yPos + 19);
+                    
+                    if (clientPhone) doc.text(`Phone: ${clientPhone}`, margin + 110, yPos + 19);
+                    if (clientEmail) doc.text(`Email: ${clientEmail}`, margin + 110, yPos + 24);
+                    
+                    yPos += billToHeight + 8;
+                    
+                    // Items Table - BIGGER
+                    const calculations = calculateTotals();
+                    const items = document.querySelectorAll('.item-row');
+                    const tableData = [];
+                    
+                    items.forEach((item, index) => {
+                        const desc = item.querySelector('.item-desc-input').value;
+                        const qty = item.querySelector('.item-qty').value;
+                        const unit = item.querySelector('.item-unit').value;
+                        const rate = parseFloat(item.querySelector('.item-rate').value).toFixed(2);
+                        const amount = parseFloat(item.querySelector('.item-amount').value).toFixed(2);
+                        
+                        tableData.push([
+                            (index + 1).toString(),
+                            desc,
+                            qty,
+                            unit,
+                            'Rs. ' + rate,
+                            'Rs. ' + amount
+                        ]);
+                    });
+                    
+                    doc.autoTable({
+                        startY: yPos,
+                        head: [['#', 'Description', 'Qty', 'Unit', 'Rate', 'Amount']],
+                        body: tableData,
+                        theme: 'grid',
+                        headStyles: {
+                            fillColor: [31, 41, 55],
+                            textColor: [255, 255, 255],
+                            fontSize: 11,
+                            fontStyle: 'bold',
+                            cellPadding: 4
+                        },
+                        columnStyles: {
+                            0: { cellWidth: 12, halign: 'center', fontSize: 11 },
+                            1: { cellWidth: 95, fontSize: 11 },
+                            2: { cellWidth: 15, halign: 'center', fontSize: 11 },
+                            3: { cellWidth: 22, halign: 'center', fontSize: 11 },
+                            4: { cellWidth: 25, halign: 'right', fontSize: 11 },
+                            5: { cellWidth: 25, halign: 'right', fontSize: 11 }
+                        },
+                        styles: {
+                            fontSize: 11,
+                            cellPadding: 4,
+                            lineColor: [220, 220, 220],
+                            lineWidth: 0.2,
+                            overflow: 'linebreak'
+                        },
+                        margin: { left: margin, right: margin }
+                    });
+                    
+                    yPos = doc.lastAutoTable.finalY + 8;
+                    
+                    // Totals
+                    const totalsX = pageWidth - margin - 70;
+                    doc.setFontSize(11);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(107, 114, 128);
+                    
+                    doc.text('Subtotal:', totalsX, yPos);
+                    doc.text(`Rs. ${calculations.subtotal.toFixed(2)}`, pageWidth - margin, yPos, { align: 'right' });
+                    yPos += 6;
+                    
+                    if (calculations.discountAmount > 0) {
+                        doc.setTextColor(5, 150, 105);
+                        doc.text(`Discount (${document.getElementById('discountPercent').value}%):`, totalsX, yPos);
+                        doc.text(`-Rs. ${calculations.discountAmount.toFixed(2)}`, pageWidth - margin, yPos, { align: 'right' });
+                        yPos += 6;
+                    }
+                    
+                    doc.setTextColor(107, 114, 128);
+                    doc.text(`GST (${document.getElementById('gstPercent').value}%):`, totalsX, yPos);
+                    doc.text(`Rs. ${calculations.gstAmount.toFixed(2)}`, pageWidth - margin, yPos, { align: 'right' });
+                    yPos += 3;
+                    
+                    doc.setDrawColor(31, 41, 55);
+                    doc.setLineWidth(0.6);
+                    doc.line(totalsX, yPos, pageWidth - margin, yPos);
+                    yPos += 6;
+                    
+                    doc.setFontSize(15);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(31, 41, 55);
+                    doc.text('TOTAL:', totalsX, yPos);
+                    doc.text(`Rs. ${calculations.total.toFixed(2)}`, pageWidth - margin, yPos, { align: 'right' });
+                    yPos += 10;
+                    
+                    // Payment Schedule
+                    if (document.getElementById('enableAdvance').checked && calculations.advanceAmount > 0) {
+                        doc.setFillColor(219, 234, 254);
+                        doc.roundedRect(margin, yPos, contentWidth, 20, 2, 2, 'F');
+                        doc.setDrawColor(59, 130, 246);
+                        doc.setLineWidth(1);
+                        doc.roundedRect(margin, yPos, contentWidth, 20, 2, 2, 'S');
+                        
+                        doc.setFontSize(11);
+                        doc.setFont('helvetica', 'bold');
+                        doc.setTextColor(30, 64, 175);
+                        doc.text('Payment Schedule:', margin + 4, yPos + 7);
+                        
+                        doc.setFontSize(10);
+                        doc.text(`Advance (${document.getElementById('advancePercent').value}%): Rs. ${calculations.advanceAmount.toFixed(2)}`, margin + 4, yPos + 13);
+                        
+                        doc.setFont('helvetica', 'normal');
+                        doc.setTextColor(75, 85, 99);
+                        doc.text(`Balance: Rs. ${calculations.remainingAmount.toFixed(2)}`, margin + 4, yPos + 17);
+                        
+                        yPos += 24;
+                    }
+                    
+                    // Notes - Compact
+                    const paymentTerms = document.getElementById('paymentTerms').value;
+                    const warrantyTerms = document.getElementById('warrantyTerms').value;
+                    const additionalNotes = document.getElementById('additionalNotes').value;
+                    
+                    if (paymentTerms || warrantyTerms || additionalNotes) {
+                        let notesLines = [];
+                        if (paymentTerms) notesLines.push(...doc.splitTextToSize(`Payment: ${paymentTerms}`, contentWidth - 8));
+                        if (warrantyTerms) notesLines.push(...doc.splitTextToSize(`Warranty: ${warrantyTerms}`, contentWidth - 8));
+                        if (additionalNotes) notesLines.push(...doc.splitTextToSize(additionalNotes, contentWidth - 8));
+                        
+                        const notesHeight = Math.min((notesLines.length * 3.5) + 8, 30);
+                        
+                        doc.setFillColor(254, 243, 199);
+                        doc.roundedRect(margin, yPos, contentWidth, notesHeight, 2, 2, 'F');
+                        doc.setDrawColor(245, 158, 11);
+                        doc.setLineWidth(1.5);
+                        doc.line(margin, yPos, margin, yPos + notesHeight);
+                        
+                        doc.setFontSize(8);
+                        doc.setFont('helvetica', 'bold');
+                        doc.setTextColor(146, 64, 14);
+                        doc.text('NOTES:', margin + 4, yPos + 5);
+                        
+                        doc.setFontSize(8);
+                        doc.setFont('helvetica', 'normal');
+                        doc.setTextColor(120, 53, 15);
+                        doc.text(notesLines.slice(0, 6), margin + 4, yPos + 9);
+                        
+                        yPos += notesHeight + 6;
+                    }
+                    
+                    // Bank Details - Keep on same page if space available
+                    if (document.getElementById('bankAccountName').value) {
+                        const bankHeight = 24;
+                        
+                        if (yPos + bankHeight > pageHeight - 20) {
+                            doc.addPage();
+                            yPos = margin;
+                        }
+                        
+                        doc.setFillColor(224, 242, 254);
+                        doc.roundedRect(margin, yPos, contentWidth, bankHeight, 2, 2, 'F');
+                        doc.setDrawColor(2, 132, 199);
+                        doc.setLineWidth(1.5);
+                        doc.line(margin, yPos, margin, yPos + bankHeight);
+                        
+                        doc.setFontSize(8);
+                        doc.setFont('helvetica', 'bold');
+                        doc.setTextColor(7, 89, 133);
+                        doc.text('BANK DETAILS:', margin + 4, yPos + 5);
+                        
+                        doc.setFontSize(8);
+                        doc.setFont('helvetica', 'normal');
+                        doc.setTextColor(12, 74, 110);
+                        
+                        // Two columns
+                        doc.text(`Account: ${document.getElementById('bankAccountName').value}`, margin + 4, yPos + 10);
+                        doc.text(`Acc No: ${document.getElementById('bankAccountNumber').value}`, margin + 4, yPos + 14);
+                        doc.text(`Branch: ${document.getElementById('bankBranch').value}`, margin + 4, yPos + 18);
+                        
+                        doc.text(`Bank: ${document.getElementById('bankName').value}`, margin + 105, yPos + 10);
+                        doc.text(`IFSC: ${document.getElementById('bankIFSC').value}`, margin + 105, yPos + 14);
+                        
+                        yPos += bankHeight + 6;
+                    }
+                    
+                    // Signature
+                    // Signature - IMPROVED
+                    const hasSignature = uploadedSignature || (signaturePad && !signaturePad.isEmpty());
+                    if (hasSignature && yPos < pageHeight - 30) {
+                        let signatureData = uploadedSignature;
+                        
+                        // If no uploaded signature, get from pad
+                        if (!signatureData && signaturePad && !signaturePad.isEmpty()) {
+                            signatureData = signaturePad.toDataURL('image/png', 1.0);
+                        }
+                        
+                        console.log('Adding signature to PDF, data type:', typeof signatureData);
+                        console.log('Signature data starts with:', signatureData ? signatureData.substring(0, 30) : 'null');
+                        
+                        // Authorized person name
+                        const authorizedPersonName = document.getElementById('authorizedPersonName').value || 'Authorized Person';
+                        
+                        doc.setFontSize(10);
+                        doc.setFont('helvetica', 'normal');
+                        doc.setTextColor(107, 114, 128);
+                        doc.text('Authorized Signature:', pageWidth - margin - 55, yPos);
+                        
+                        try {
+                            // Ensure data is in proper format
+                            if (signatureData && signatureData.startsWith('data:image')) {
+                                doc.addImage(signatureData, 'PNG', pageWidth - margin - 55, yPos + 3, 50, 22);
+                                console.log('Signature added successfully!');
+                            } else {
+                                throw new Error('Invalid signature data format');
+                            }
+                        } catch(e) {
+                            console.error('Signature error:', e);
+                            doc.setFontSize(8);
+                            doc.setTextColor(200, 0, 0);
+                            doc.text('(Signature unavailable)', pageWidth - margin - 55, yPos + 10);
+                        }
+                        
+                        // Add authorized person name below signature
+                        doc.setFontSize(9);
+                        doc.setFont('helvetica', 'normal');
+                        doc.setTextColor(75, 85, 99);
+                        doc.text(authorizedPersonName, pageWidth - margin - 55, yPos + 27);
+                        
+                        yPos += 35; // Add space after signature and name
+                    } else {
+                        console.log('No signature to add. hasSignature:', hasSignature, 'yPos:', yPos);
+                    }
+                    
+                    // Footer
+                    doc.setFontSize(7);
+                    doc.setTextColor(156, 163, 175);
+                    doc.text(
+                        `Computer-generated document. Generated on ${formatDate(new Date().toISOString().split('T')[0])}`,
+                        pageWidth / 2,
+                        pageHeight - 8,
+                        { align: 'center' }
+                    );
+                    
+                    // Save
+                    const docTypeName = docType === 'quotation' ? 'Quotation' : 'Invoice';
+                    doc.save(`Ambivare_${docTypeName}_${invoiceNumber}.pdf`);
+                    
+                    document.getElementById('loadingOverlay').classList.remove('active');
+                    alert('PDF downloaded successfully! ✅');
+                    
+                } catch (error) {
+                    console.error('PDF error:', error);
+                    document.getElementById('loadingOverlay').classList.remove('active');
+                    alert('Error: ' + error.message);
+                }
+            }, 500);
+        }
+        
+        // Reset form
+        function resetForm() {
+            if (confirm('Are you sure you want to reset the form? All data will be lost.')) {
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
